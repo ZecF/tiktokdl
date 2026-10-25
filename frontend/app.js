@@ -34,6 +34,17 @@ let lastUrl   = '';
 let lastData  = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
+function extractTiktokLink(text) {
+  if (!text || typeof text !== 'string') return null;
+  const m = text.match(/(https?:\/\/(?:[a-zA-Z0-9_-]+\.)?tiktok\.com\/[^\s?#]+|(?:vt|vm|wm|m|www)?\.?tiktok\.com\/[^\s?#]+)/i);
+  if (!m) return null;
+  let u = m[1];
+  if (!u.startsWith('http://') && !u.startsWith('https://')) {
+    u = 'https://' + u;
+  }
+  return u;
+}
+
 function fmtNum(n) {
   if (!n) return '0';
   const num = Number(n);
@@ -106,8 +117,9 @@ document.addEventListener('keydown', async (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && document.activeElement !== urlInput) {
     try {
       const text = await navigator.clipboard.readText();
-      if (text && text.includes('tiktok.com')) {
-        urlInput.value = text.trim();
+      const extracted = extractTiktokLink(text);
+      if (extracted) {
+        urlInput.value = extracted;
         clearBtn.classList.add('visible');
         toast('Link TikTok ter-paste!', 'success', 2000);
         fetchVideo();
@@ -306,12 +318,15 @@ async function fetchVideo() {
     return;
   }
 
-  if (!raw.includes('tiktok.com')) {
-    toast('URL tidak valid. Pastikan dari TikTok.', 'error');
+  const cleanLink = extractTiktokLink(raw);
+  if (!cleanLink) {
+    toast('URL tidak valid. Masukkan link tiktok.com, vt.tiktok, atau wm.tiktok.', 'error');
     return;
   }
 
-  lastUrl = raw;
+  // Update input with clean extracted URL
+  urlInput.value = cleanLink;
+  lastUrl = cleanLink;
   showSection('loading');
   fetchBtn.disabled = true;
   fetchBtn.classList.add('loading');
@@ -332,7 +347,7 @@ async function fetchVideo() {
     const res = await fetch(`${API_BASE}/api/info`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: raw }),
+      body: JSON.stringify({ url: cleanLink }),
     });
 
     const json = await res.json();
@@ -358,10 +373,11 @@ async function fetchVideo() {
 // ── Auto-detect paste into page ───────────────────────────────────────────
 document.addEventListener('paste', (e) => {
   const text = (e.clipboardData || window.clipboardData).getData('text');
-  if (text && text.includes('tiktok.com') && document.activeElement !== urlInput) {
-    urlInput.value = text.trim();
+  const extracted = extractTiktokLink(text);
+  if (extracted && document.activeElement !== urlInput) {
+    urlInput.value = extracted;
     clearBtn.classList.add('visible');
-    toast('Link ter-paste! Mengambil video...', 'success', 2500);
+    toast('Link TikTok terdeteksi! Mengambil video...', 'success', 2500);
     fetchVideo();
   }
 });
