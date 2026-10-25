@@ -1,0 +1,13 @@
+{
+  "name": "tiksave-downloader",
+  "description": "TikTok HD Downloader without watermark",
+  "keywords": ["tiktok", "downloader", "node", "yt-dlp"],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    },
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}
