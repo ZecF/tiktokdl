@@ -133,20 +133,54 @@ function cleanExpiredDownloads() {
 }
 setInterval(cleanExpiredDownloads, 3 * 60 * 1000);
 
-// ─── URL Sanitizer ────────────────────────────────────────────────────────────
-function sanitizeTiktokUrl(input) {
+// ─── URL Extractor & Canonical Redirect Resolver ──────────────────────────────
+// Supports: tiktok.com, vt.tiktok.com, vm.tiktok.com, wm.tiktok.com, m.tiktok.com
+function extractTiktokUrl(input) {
   if (!input || typeof input !== 'string') return null;
-  const trimmed = input.trim();
-  const match = trimmed.match(/(https?:\/\/(?:[a-zA-Z0-9_-]+\.)?tiktok\.com\/[^\s]+)/i);
+  const match = input.match(/(https?:\/\/(?:[a-zA-Z0-9_-]+\.)?tiktok\.com\/[^\s?#]+|(?:vt|vm|wm|m|www)?\.?tiktok\.com\/[^\s?#]+)/i);
   if (!match) return null;
-
-  try {
-    const parsed = new URL(match[1]);
-    const cleanUrl = `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
-    return cleanUrl;
-  } catch {
-    return null;
+  let url = match[1];
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
   }
+  return url;
+}
+
+async function resolveCanonicalUrl(rawUrl) {
+  const extracted = extractTiktokUrl(rawUrl);
+  if (!extracted) return null;
+
+  // If already canonical video URL, clean query params
+  if (extracted.includes('/video/') || extracted.includes('/photo/')) {
+    try {
+      const u = new URL(extracted);
+      return `${u.protocol}//${u.host}${u.pathname}`;
+    } catch {
+      return extracted;
+    }
+  }
+
+  // Follow HTTP 301/302 redirects for vt.tiktok.com, vm.tiktok.com, wm.tiktok.com, etc.
+  try {
+    const res = await axios.get(extracted, {
+      maxRedirects: 6,
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      validateStatus: (s) => s >= 200 && s < 400,
+    });
+    const finalUrl = res.request?.res?.responseUrl || res.config?.url;
+    if (finalUrl && (finalUrl.includes('/video/') || finalUrl.includes('/photo/'))) {
+      const u = new URL(finalUrl);
+      return `${u.protocol}//${u.host}${u.pathname}`;
+    }
+  } catch (err) {
+    console.warn('[Redirect Resolver] Fallback to:', extracted, err.message);
+  }
+
+  return extracted;
 }
 
 // ─── Extraction Engines ───────────────────────────────────────────────────────
@@ -235,9 +269,9 @@ app.post('/api/info', async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'URL is required.' });
 
-  const cleanUrl = sanitizeTiktokUrl(url);
+  const cleanUrl = await resolveCanonicalUrl(url);
   if (!cleanUrl) {
-    return res.status(400).json({ success: false, error: 'Invalid TikTok URL structure.' });
+    return res.status(400).json({ success: false, error: 'Invalid TikTok URL structure. Mendukung tiktok.com, vt.tiktok, wm.tiktok, vm.tiktok.' });
   }
 
   const cacheKey = `kinetik_info:${cleanUrl}`;
@@ -364,9 +398,9 @@ app.post('/api/info', async (req, res) => {
 });
 
 // Live Binary Stream (Powers in-browser video preview & direct streaming)
-app.get('/api/stream', (req, res) => {
+app.get('/api/stream', async (req, res) => {
   const { url, format = 'hd', download = '0', title = 'tiktok_master' } = req.query;
-  const cleanUrl = sanitizeTiktokUrl(url);
+  const cleanUrl = await resolveCanonicalUrl(url);
   if (!cleanUrl) return res.status(400).send('Invalid TikTok URL');
 
   const safeFilename = `${title.replace(/[^a-zA-Z0-9_-]/g, '_')}.${format === 'audio' ? 'mp3' : 'mp4'}`;
@@ -409,7 +443,7 @@ app.get('/api/stream', (req, res) => {
 // Local File Generator (Guaranteed reliable browser download link)
 app.post('/api/download', async (req, res) => {
   const { url, format = 'hd' } = req.body;
-  const cleanUrl = sanitizeTiktokUrl(url);
+  const cleanUrl = await resolveCanonicalUrl(url);
   if (!cleanUrl) return res.status(400).json({ success: false, error: 'Invalid URL' });
 
   const fileId = uuidv4().slice(0, 8);
