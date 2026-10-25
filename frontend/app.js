@@ -184,7 +184,8 @@ async function triggerSafeDownload(format, label) {
   }
 
   // Stream fallback with attachment header
-  const streamUrl = `${API_BASE}/api/stream?url=${encodeURIComponent(lastUrl)}&format=${format}&download=1&title=tiktok_${format}`;
+  const mediaId = lastData?.id || '';
+  const streamUrl = `${API_BASE}/api/stream?id=${encodeURIComponent(mediaId)}&url=${encodeURIComponent(lastUrl)}&format=${format}&download=1&title=tiktok_${format}`;
   window.location.href = streamUrl;
   toast(`Download ${label} via streaming relay...`, 'success');
 }
