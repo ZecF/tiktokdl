@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TikSave — TikTok HD Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Aurora background blobs -->
+  <div class="aurora" aria-hidden="true">
+    <div class="aurora__blob aurora__blob--1"></div>
+    <div class="aurora__blob aurora__blob--2"></div>
+    <div class="aurora__blob aurora__blob--3"></div>
+  </div>
+
+  <!-- Noise texture overlay -->
+  <div class="noise" aria-hidden="true"></div>
+
+  <header class="header">
+    <div class="header__inner">
+      <div class="logo">
+        <svg class="logo__icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 2C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2Z" fill="url(#lg1)"/>
+          <path d="M21.5 11.5c-.8 0-1.5-.3-2-.8V19a4 4 0 1 1-4-4c.3 0 .5 0 .8.1v2.1c-.3-.1-.5-.2-.8-.2a2 2 0 1 0 2 2v-9.5h2c.3 1.7 1.7 3 3 3v2z" fill="#fff"/>
+          <defs>
+            <linearGradient id="lg1" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#ff2d55"/>
+              <stop offset="1" stop-color="#ff6b35"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="logo__text">TikSave</span>
+      </div>
+      <nav class="nav">
+        <a href="#how" class="nav__link">How It Works</a>
+        <a href="#faq" class="nav__link">FAQ</a>
+        <span class="nav__badge">HD</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero__tag">
+        <span class="tag__dot"></span>
+        No watermark · HD quality · Free
+      </div>
+      <h1 class="hero__title">
+        Download TikTok<br />
+        <span class="hero__title--grad">Tanpa Watermark</span>
+      </h1>
+      <p class="hero__sub">
+        Simpan video TikTok kualitas HD, SD, atau audio MP3 — langsung, cepat, gratis.
+      </p>
+
+      <!-- Input card -->
+      <div class="card input-card">
+        <div class="input-wrap">
+          <svg class="input-wrap__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+          <input
+            id="urlInput"
+            class="url-input"
+            type="url"
+            placeholder="Paste link TikTok di sini..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="clear-btn" id="clearBtn" title="Clear" aria-label="Clear input">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <button class="fetch-btn" id="fetchBtn">
+          <span class="fetch-btn__text">Ambil Video</span>
+          <svg class="fetch-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Paste helper -->
+      <p class="paste-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Tekan <kbd>Ctrl+V</kbd> untuk paste langsung
+      </p>
+    </section>
+
+    <!-- Loading state -->
+    <div class="loading-state hidden" id="loadingState">
+      <div class="loader">
+        <div class="loader__ring"></div>
+        <div class="loader__ring loader__ring--2"></div>
+        <div class="loader__ring loader__ring--3"></div>
+      </div>
+      <p class="loading-state__text" id="loadingText">Mengambil informasi video...</p>
+    </div>
+
+    <!-- Error state -->
+    <div class="error-state hidden" id="errorState">
+      <div class="error-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <p class="error-msg" id="errorMsg">Terjadi kesalahan.</p>
+      <button class="retry-btn" id="retryBtn">Coba Lagi</button>
+    </div>
+
+    <!-- Result card -->
+    <div class="result-section hidden" id="resultSection">
+      <div class="card result-card">
+        <!-- Video preview -->
+        <div class="video-preview">
+          <div class="video-thumb-wrap">
+            <img class="video-thumb" id="videoThumb" src="" alt="Cover" loading="lazy" />
+            <div class="video-thumb__overlay">
+              <div class="thumb-duration" id="thumbDuration">0:00</div>
+            </div>
+          </div>
+          <div class="video-meta">
+            <div class="video-author">
+              <img class="video-author__avatar" id="authorAvatar" src="" alt="Avatar" />
+              <div>
+                <p class="video-author__name" id="authorName">@unknown</p>
+                <p class="video-author__tag">Creator</p>
+              </div>
+            </div>
+            <h2 class="video-title" id="videoTitle">—</h2>
+            <div class="video-stats">
+              <div class="stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span id="statViews">0</span>
+              </div>
+              <div class="stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span id="statLikes">0</span>
+              </div>
+              <div class="stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span id="statComments">0</span>
+              </div>
+              <div class="stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                <span id="statShares">0</span>
+              </div>
+            </div>
+            <!-- Music info -->
+            <div class="music-chip" id="musicChip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+              <span id="musicInfo">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Download options -->
+        <div class="download-section">
+          <h3 class="download-section__title">Pilih Format Download</h3>
+          <div class="download-grid" id="downloadGrid">
+            <!-- Filled by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <section class="how-section" id="how">
+      <h2 class="section-title">Cara Pakai</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step__num">01</div>
+          <div class="step__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <h3>Copy Link</h3>
+          <p>Buka TikTok, klik Share → Copy Link pada video yang ingin kamu download.</p>
+        </div>
+        <div class="step">
+          <div class="step__num">02</div>
+          <div class="step__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </div>
+          <h3>Paste & Fetch</h3>
+          <p>Paste link di kolom input di atas lalu klik tombol "Ambil Video".</p>
+        </div>
+        <div class="step">
+          <div class="step__num">03</div>
+          <div class="step__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          </div>
+          <h3>Download</h3>
+          <p>Pilih kualitas HD, SD, atau MP3 audio. Video langsung tersimpan tanpa watermark.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq-section" id="faq">
+      <h2 class="section-title">FAQ</h2>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Apakah hasilnya benar-benar tanpa watermark?</summary>
+          <p>Ya. Kami menggunakan stream langsung tanpa logo atau tanda air TikTok.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Apa bedanya HD dan SD?</summary>
+          <p>HD menggunakan stream resolusi penuh dari server TikTok. SD adalah versi yang lebih hemat kuota.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Bisa download audio saja?</summary>
+          <p>Bisa. Pilih tombol <strong>Audio MP3</strong> untuk mengunduh hanya suara dari video.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Apakah ada batas download?</summary>
+          <p>Bebas digunakan tanpa batasan harian.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Apakah video disimpan di server?</summary>
+          <p>File download di-cache sementara dan dihapus otomatis setelah 10 menit. Tidak ada data yang tersimpan permanen.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>TikSave — Hanya untuk penggunaan pribadi. Hormati hak cipta konten kreator.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
